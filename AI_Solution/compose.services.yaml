@@ -1,0 +1,30 @@
+services:
+  test_gpu:
+    image: nvidia/cuda:12.3.1-base-ubuntu20.04
+    command: nvidia-smi
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  ollama:
+    image: ollama/ollama
+    restart: unless-stopped
+    ports:
+      - 11434:11434
+    environment:
+      - TZ=Asia/Bangkok
+    volumes:
+      - ./data_ollama:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          # cpus: '18'
+          memory: 32G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  db_data_eng_interview:
+    image: postgres:15
+    container_name: pg-data-eng-interview
+    environment:
+      POSTGRES_USER: ${Data_ENG_INTERVIEW_USER}
+      POSTGRES_PASSWORD: ${Data_ENG_INTERVIEW_PASSWORD}
+      POSTGRES_DB: ${Data_ENG_INTERVIEW_DB_NAME}
+    volumes:
+      - ./pg_data_eng_interview:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${Data_ENG_INTERVIEW_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    ports:
+      - "5438:5432"
+    networks:
+      - app_network
+
+  api:
+    build:
+      context: ./Question4
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./Question4:/app
+    networks:
+      - app_network
+    depends_on:
+      - db_data_eng_interview
+    restart: always
+  web:
+    build:
+      context: ./Question5/my-prediction-app
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    restart: always
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - api
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

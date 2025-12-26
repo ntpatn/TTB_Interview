@@ -1,0 +1,47 @@
+npx create-next-app@latest my-prediction-app
+Need to install the following packages:
+create-next-app@16.1.1
+Ok to proceed? (y) y
+
+√ Would you like to use the recommended Next.js defaults? » No, customize settings
+√ Would you like to use TypeScript? ... No
+√ Which linter would you like to use? » ESLint
+√ Would you like to use React Compiler? ... No 
+√ Would you like to use Tailwind CSS? ... No 
+√ Would you like your code inside a `src/` directory? ... Yes
+√ Would you like to use App Router? (recommended) ...  Yes
+√ Would you like to customize the import alias (`@/*` by default)? ... No 
+Creating a new Next.js app in C:\Users\Lenovo\Desktop\TTB_Interview\Data_Engineering\Question5\my-prediction-app.
+
+Using npm.
+
+Initializing project with template: app
+
+
+Installing dependencies:
+- next
+- react
+- react-dom
+
+Installing devDependencies:
+- eslint
+- eslint-config-next
+
+
+added 333 packages, and audited 334 packages in 2m
+
+136 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+Generating route types...
+✓ Types generated successfully
+
+Success! Created my-prediction-app at C:\Users\Lenovo\Desktop\TTB_Interview\Data_Engineering\Question5\my-prediction-app
+
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.7.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.7.0
+npm notice To update run: npm install -g npm@11.7.0
+npm notice
