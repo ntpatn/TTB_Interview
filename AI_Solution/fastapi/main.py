@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import prediction
+from routers import chat
 
 app = FastAPI(
-    title="Data Engineering TTB Interview",
-    description="API for Question 4: Create a FastAPI endpoint POST/predict",
+    title="AI Solution TTB Interview Path",
+    description="API for Question 6: Building an AI Solution using FastAPI and Ollama",
     version="1.0.0",
 )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,4 +22,4 @@ def root():
     return {"status": "API is running"}
 
 
-app.include_router(prediction.router)
+app.include_router(chat.router)

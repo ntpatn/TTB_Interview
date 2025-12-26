@@ -1,0 +1,4 @@
+node_modules/
+data_ollama/
+pg_chatbot_interview/
+__pycache__/
