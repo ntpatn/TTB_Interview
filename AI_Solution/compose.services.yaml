@@ -17,7 +17,7 @@ services:
     ports:
       - "5439:5432"
   web-chatbot:
-    build: .
+    build: ./fontend
     restart: unless-stopped
     ports:
       - "3030:3030"
@@ -28,7 +28,7 @@ services:
     depends_on:
       - ollama
   backend-ai:
-    build: ./fastapi
+    build: ./backend/fastapi
     ports:
       - "8008:8008"
     environment:

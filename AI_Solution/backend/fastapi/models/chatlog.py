@@ -16,3 +16,4 @@ class ChatLog(Base):
     ai_response = Column(Text)
     model_used = Column(String)
     created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
+    user_name = Column(Text)

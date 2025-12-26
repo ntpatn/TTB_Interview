@@ -38,13 +38,12 @@ async def process_chat(request: ChatRequestDTO, config: dict) -> ChatResponseDTO
             raw_reply = data.get("response", "")
             try:
                 with SessionLocal() as db:
-                    from sqlalchemy.dialects.postgresql import UUID
-
                     new_log = ChatLog(
                         id=None,
                         user_message=request.message,
                         ai_response=raw_reply,
                         model_used=config["model"],
+                        user_name=request.user_id,
                     )
                     db.add(new_log)
                     db.commit()
