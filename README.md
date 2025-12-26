@@ -16,7 +16,7 @@ This repository contains the complete solutions for the TTB Banking Data Enginee
 
 For a comprehensive overview of the system architecture, database schema design, and the thought process behind the solution, please refer to the Figma diagram below:
 
-👉 **[View System Architecture & Diagrams on Figma]https://www.figma.com/board/c77zmhrepwOp3J0lVOHidY/TTB_INTERVIEW?node-id=2-461&t=WA4fAxDHv71NoNpD-1**
+👉 **[View System Architecture & Diagrams on Figma]https://www.figma.com/board/c77zmhrepwOp3J0lVOHidY/TTB_INTERVIEW?node-id=2-296&t=Y8e8DoYZczW6ybDb-1**
 
 ## 📂 Repository Structure
 
