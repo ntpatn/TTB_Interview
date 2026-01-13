@@ -3,19 +3,22 @@ services:
     image: postgres:15
     container_name: db_chatbot_section_interview
     environment:
-      POSTGRES_USER: ${CHATBOT_INTERVIEW_USER}
-      POSTGRES_PASSWORD: ${CHATBOT_INTERVIEW_PASSWORD}
-      POSTGRES_DB: ${CHATBOT_INTERVIEW_DB_NAME}
+      POSTGRES_USER: ${CHATBOT_INTERVIEW_USER:-admin}
+      POSTGRES_PASSWORD: ${CHATBOT_INTERVIEW_PASSWORD:-admin}
+      POSTGRES_DB: ${CHATBOT_INTERVIEW_DB_NAME:-chatbotinterview}
     volumes:
       - ./pg_chatbot_interview:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${CHATBOT_INTERVIEW_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${CHATBOT_INTERVIEW_USER:-admin}"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
     ports:
       - "5439:5432"
+    networks:
+      - app-network
+
   web-chatbot:
     build: ./fontend
     restart: unless-stopped
@@ -27,23 +30,34 @@ services:
       - AI_SERVICE_URL=http://backend-ai:8008
     depends_on:
       - ollama
+    networks:
+      - app-network
+
   backend-ai:
     build: ./backend/fastapi
+    container_name: backend-ai
     ports:
       - "8008:8008"
     environment:
       - OLLAMA_HOST=ollama
-      - CHATBOT_INTERVIEW_USER=${CHATBOT_INTERVIEW_USER}
-      - CHATBOT_INTERVIEW_PASSWORD=${CHATBOT_INTERVIEW_PASSWORD}
-      - CHATBOT_INTERVIEW_DB_NAME=${CHATBOT_INTERVIEW_DB_NAME}
+      - CHATBOT_INTERVIEW_USER=${CHATBOT_INTERVIEW_USER:-admin}
+      - CHATBOT_INTERVIEW_PASSWORD=${CHATBOT_INTERVIEW_PASSWORD:-admin}
+      - CHATBOT_INTERVIEW_DB_NAME=${CHATBOT_INTERVIEW_DB_NAME:-chatbotinterview}
       - DB_HOST=db_chatbot_section_interview
       - DB_PORT=5432
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
     depends_on:
       db_chatbot_section_interview:
         condition: service_healthy
+      langfuse-server:
+        condition: service_started # เปลี่ยนจาก healthy เป็น started
       ollama:
         condition: service_started
     restart: always
+    networks:
+      - app-network
 
   test_gpu:
     image: nvidia/cuda:12.3.1-base-ubuntu20.04
@@ -55,8 +69,12 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    networks:
+      - app-network
+
   ollama:
     image: ollama/ollama
+    container_name: ollama
     restart: unless-stopped
     ports:
       - 11434:11434
@@ -74,3 +92,29 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    networks:
+      - app-network
+
+  langfuse-server:
+    image: langfuse/langfuse:2
+    container_name: langfuse-server
+    depends_on:
+      db_chatbot_section_interview:
+        condition: service_healthy
+    ports:
+      - "3040:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${CHATBOT_INTERVIEW_USER:-admin}:${CHATBOT_INTERVIEW_PASSWORD:-admin}@db_chatbot_section_interview:5432/${CHATBOT_INTERVIEW_DB_NAME:-chatbotinterview}?schema=langfuse
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-super_secret_key_min_32_chars_change_this}
+      - SALT=${SALT:-super_salt_min_32_chars_change_this}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3040}
+      - TELEMETRY_ENABLED=${TELEMETRY_ENABLED:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
