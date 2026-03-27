@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import chat
+from routers import chat_rag
 
 app = FastAPI(
     title="AI Solution TTB Interview Path",
@@ -23,3 +24,4 @@ def root():
 
 
 app.include_router(chat.router)
+app.include_router(chat_rag.router)

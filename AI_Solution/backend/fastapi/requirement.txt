@@ -6,3 +6,9 @@ httpx
 pytest
 sqlalchemy
 psycopg2-binary
+langfuse
+
+sentence-transformers 
+scikit-learn
+numpy
+torch

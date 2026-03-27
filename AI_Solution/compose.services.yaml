@@ -1,21 +1,60 @@
+version: "3.8"
+
 services:
+  # ----------------------------------------------------
+  # Database (Postgres)
+  # ----------------------------------------------------
   db_chatbot_section_interview:
     image: postgres:15
-    container_name: db_chatbot_section_interview
     environment:
-      POSTGRES_USER: ${CHATBOT_INTERVIEW_USER}
-      POSTGRES_PASSWORD: ${CHATBOT_INTERVIEW_PASSWORD}
-      POSTGRES_DB: ${CHATBOT_INTERVIEW_DB_NAME}
+      POSTGRES_USER: ${CHATBOT_INTERVIEW_USER:-admin}
+      POSTGRES_PASSWORD: ${CHATBOT_INTERVIEW_PASSWORD:-admin}
+      POSTGRES_DB: ${CHATBOT_INTERVIEW_DB_NAME:-chatbotinterview}
     volumes:
       - ./pg_chatbot_interview:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${CHATBOT_INTERVIEW_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${CHATBOT_INTERVIEW_USER:-admin}"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
     ports:
       - "5439:5432"
+    networks:
+      - app-network
+
+  # ----------------------------------------------------
+  # ClickHouse
+  # ----------------------------------------------------
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    user: "101:101"
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - ./clickhouse_data:/var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=mysecretpassword # <--- ตั้งรหัสผ่านตรงนี้
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - app-network
+
+  # ----------------------------------------------------
+  # Web Frontend
+  # ----------------------------------------------------
   web-chatbot:
     build: ./fontend
     restart: unless-stopped
@@ -27,24 +66,40 @@ services:
       - AI_SERVICE_URL=http://backend-ai:8008
     depends_on:
       - ollama
+    networks:
+      - app-network
+
+  # ----------------------------------------------------
+  # Backend API
+  # ----------------------------------------------------
   backend-ai:
     build: ./backend/fastapi
     ports:
       - "8008:8008"
     environment:
       - OLLAMA_HOST=ollama
-      - CHATBOT_INTERVIEW_USER=${CHATBOT_INTERVIEW_USER}
-      - CHATBOT_INTERVIEW_PASSWORD=${CHATBOT_INTERVIEW_PASSWORD}
-      - CHATBOT_INTERVIEW_DB_NAME=${CHATBOT_INTERVIEW_DB_NAME}
+      - CHATBOT_INTERVIEW_USER=${CHATBOT_INTERVIEW_USER:-admin}
+      - CHATBOT_INTERVIEW_PASSWORD=${CHATBOT_INTERVIEW_PASSWORD:-admin}
+      - CHATBOT_INTERVIEW_DB_NAME=${CHATBOT_INTERVIEW_DB_NAME:-chatbotinterview}
       - DB_HOST=db_chatbot_section_interview
       - DB_PORT=5432
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
     depends_on:
       db_chatbot_section_interview:
         condition: service_healthy
+      langfuse-server:
+        condition: service_started
       ollama:
         condition: service_started
     restart: always
+    networks:
+      - app-network
 
+  # ----------------------------------------------------
+  # Test GPU
+  # ----------------------------------------------------
   test_gpu:
     image: nvidia/cuda:12.3.1-base-ubuntu20.04
     command: nvidia-smi
@@ -55,6 +110,12 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    networks:
+      - app-network
+
+  # ----------------------------------------------------
+  # Ollama
+  # ----------------------------------------------------
   ollama:
     image: ollama/ollama
     restart: unless-stopped
@@ -74,3 +135,48 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    networks:
+      - app-network
+
+  # ----------------------------------------------------
+  # Langfuse Server
+  # ----------------------------------------------------
+  langfuse-server:
+    image: langfuse/langfuse:latest
+    depends_on:
+      db_chatbot_section_interview:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - "3040:3000"
+    environment:
+      - NODE_ENV=production
+
+      # Postgres Config
+      - DATABASE_URL=postgresql://${CHATBOT_INTERVIEW_USER:-admin}:${CHATBOT_INTERVIEW_PASSWORD:-admin}@db_chatbot_section_interview:5432/${CHATBOT_INTERVIEW_DB_NAME:-chatbotinterview}?schema=langfuse
+
+      # ClickHouse Config (ต้องตรงกับ Service clickhouse)
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=mysecretpassword # <--- ต้องตรงกัน
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_URL=http://clickhouse:8123
+
+      # Migration URL (Native Port 9000)
+      - CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
+
+      # Auth Config
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-super_secret_key_min_32_chars_change_this}
+      - SALT=${SALT:-super_salt_min_32_chars_change_this}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3040}
+      - TELEMETRY_ENABLED=${TELEMETRY_ENABLED:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
